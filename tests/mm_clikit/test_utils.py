@@ -3,7 +3,7 @@
 import click
 import pytest
 
-import mm_cli
+import mm_clikit
 
 
 class TestFatal:
@@ -12,11 +12,11 @@ class TestFatal:
     def test_exits_with_code_1(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Prints message and raises typer.Exit with code 1."""
         with pytest.raises(click.exceptions.Exit, match="1"):
-            mm_cli.fatal("something went wrong")
+            mm_clikit.fatal("something went wrong")
         assert capsys.readouterr().out == "something went wrong\n"
 
     def test_empty_message(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Handles empty message string."""
         with pytest.raises(click.exceptions.Exit, match="1"):
-            mm_cli.fatal("")
+            mm_clikit.fatal("")
         assert capsys.readouterr().out == "\n"

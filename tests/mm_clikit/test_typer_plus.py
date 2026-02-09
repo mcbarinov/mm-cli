@@ -5,8 +5,8 @@ import pytest
 import typer
 from typer.testing import CliRunner
 
-import mm_cli
-from mm_cli.typer_plus import AliasGroup
+import mm_clikit
+from mm_clikit.typer_plus import AliasGroup
 
 runner = CliRunner()
 
@@ -14,7 +14,7 @@ runner = CliRunner()
 @pytest.fixture(scope="module")
 def app() -> typer.Typer:
     """App with three commands: single-alias, multi-alias, no-alias."""
-    _app = mm_cli.TyperPlus()
+    _app = mm_clikit.TyperPlus()
 
     @_app.command("deploy", aliases=["d"])
     def deploy() -> None:
@@ -39,25 +39,25 @@ class TestCreateVersionCallback:
 
     def test_returns_callable(self) -> None:
         """Returns a callable."""
-        callback = mm_cli.create_version_callback("mm-cli")
+        callback = mm_clikit.create_version_callback("mm-clikit")
         assert callable(callback)
 
     def test_no_op_when_false(self) -> None:
         """Does nothing when value is False."""
-        callback = mm_cli.create_version_callback("mm-cli")
+        callback = mm_clikit.create_version_callback("mm-clikit")
         callback(False)
 
     def test_exits_when_true(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Prints version and exits when value is True."""
-        callback = mm_cli.create_version_callback("mm-cli")
+        callback = mm_clikit.create_version_callback("mm-clikit")
         with pytest.raises(click.exceptions.Exit):
             callback(True)
         output = capsys.readouterr().out
-        assert "mm-cli:" in output
+        assert "mm-clikit:" in output
 
     def test_callback_works_with_typer_option(self) -> None:
         """Can be used as a Typer Option callback."""
-        callback = mm_cli.create_version_callback("mm-cli")
+        callback = mm_clikit.create_version_callback("mm-clikit")
         typer.Option(None, "--version", callback=callback, is_eager=True)
 
 
@@ -151,7 +151,7 @@ class TestHelpOutput:
 
     def test_format_commands_excludes_hidden(self) -> None:
         """Hidden commands are excluded from format_commands."""
-        hidden_app = mm_cli.TyperPlus()
+        hidden_app = mm_clikit.TyperPlus()
 
         @hidden_app.command("visible")
         def visible() -> None:
@@ -177,7 +177,7 @@ class TestTyperPlusInit:
 
     def test_default_cls_is_alias_group(self) -> None:
         """Default cls is AliasGroup."""
-        app = mm_cli.TyperPlus()
+        app = mm_clikit.TyperPlus()
 
         @app.command("one")
         def one() -> None:
@@ -192,7 +192,7 @@ class TestTyperPlusInit:
 
     def test_version_flag(self) -> None:
         """--version works when package_name is provided."""
-        app = mm_cli.TyperPlus(package_name="mm-cli")
+        app = mm_clikit.TyperPlus(package_name="mm-clikit")
 
         @app.command("noop")
         def noop() -> None:
@@ -200,11 +200,11 @@ class TestTyperPlusInit:
 
         result = runner.invoke(app, ["--version"])
         assert result.exit_code == 0
-        assert "mm-cli:" in result.output
+        assert "mm-clikit:" in result.output
 
     def test_version_short_flag(self) -> None:
         """-V works when package_name is provided."""
-        app = mm_cli.TyperPlus(package_name="mm-cli")
+        app = mm_clikit.TyperPlus(package_name="mm-clikit")
 
         @app.command("noop")
         def noop() -> None:
@@ -212,11 +212,11 @@ class TestTyperPlusInit:
 
         result = runner.invoke(app, ["-V"])
         assert result.exit_code == 0
-        assert "mm-cli:" in result.output
+        assert "mm-clikit:" in result.output
 
     def test_no_version_without_package_name(self) -> None:
         """--version is absent when package_name is not set."""
-        app = mm_cli.TyperPlus()
+        app = mm_clikit.TyperPlus()
 
         @app.command("noop")
         def noop() -> None:
@@ -231,7 +231,7 @@ class TestCommandDecorator:
 
     def test_aliases_stored_on_callback(self) -> None:
         """_typer_aliases is set on callback when aliases are provided."""
-        app = mm_cli.TyperPlus()
+        app = mm_clikit.TyperPlus()
 
         @app.command("cmd", aliases=["c", "cm"])
         def cmd() -> None:
@@ -241,7 +241,7 @@ class TestCommandDecorator:
 
     def test_no_aliases_attr_without_param(self) -> None:
         """_typer_aliases is absent when aliases param is not passed."""
-        app = mm_cli.TyperPlus()
+        app = mm_clikit.TyperPlus()
 
         @app.command("cmd")
         def cmd() -> None:
@@ -251,7 +251,7 @@ class TestCommandDecorator:
 
     def test_empty_aliases_list(self) -> None:
         """Empty aliases=[] stores empty list, treated as no aliases."""
-        app = mm_cli.TyperPlus()
+        app = mm_clikit.TyperPlus()
 
         @app.command("cmd", aliases=[])
         def cmd() -> None:

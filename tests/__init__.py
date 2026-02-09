@@ -1,1 +1,1 @@
-"""Tests for mm-cli."""
+"""Tests for mm-clikit."""

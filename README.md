@@ -1,11 +1,11 @@
-# mm-cli
+# mm-clikit
 
 Shared CLI utilities on top of [Typer](https://typer.tiangolo.com/).
 
 ## Installation
 
 ```bash
-uv add mm-cli
+uv add mm-clikit
 ```
 
 ## Usage
@@ -15,7 +15,7 @@ uv add mm-cli
 Drop-in `Typer` replacement with automatic `--version`/`-V` and command aliases.
 
 ```python
-from mm_cli import TyperPlus
+from mm_clikit import TyperPlus
 
 app = TyperPlus(package_name="my-app")
 
@@ -36,7 +36,7 @@ Running `my-app d` is equivalent to `my-app deploy`. Help output shows `deploy (
 Escape hatch for adding `--version` when you use a custom callback.
 
 ```python
-from mm_cli import TyperPlus, create_version_callback
+from mm_clikit import TyperPlus, create_version_callback
 import typer
 
 app = TyperPlus()
@@ -57,7 +57,7 @@ def main(
 Print a message to stdout and exit with code 1.
 
 ```python
-from mm_cli import fatal
+from mm_clikit import fatal
 
 fatal("something went wrong")
 ```
@@ -69,7 +69,7 @@ fatal("something went wrong")
 Print to stdout without formatting.
 
 ```python
-from mm_cli import print_plain
+from mm_clikit import print_plain
 
 print_plain("hello", "world")
 ```
@@ -79,7 +79,7 @@ print_plain("hello", "world")
 Print an object as formatted JSON.
 
 ```python
-from mm_cli import print_json
+from mm_clikit import print_json
 
 print_json({"key": "value", "count": 42})
 ```
@@ -100,7 +100,7 @@ print_json(
 Print a Rich table.
 
 ```python
-from mm_cli import print_table
+from mm_clikit import print_table
 
 print_table(
     columns=["Name", "Status"],
@@ -114,7 +114,7 @@ print_table(
 Print TOML with syntax highlighting.
 
 ```python
-from mm_cli import print_toml
+from mm_clikit import print_toml
 
 # From a string
 print_toml('[server]\nhost = "localhost"\nport = 8080')

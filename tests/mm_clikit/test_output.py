@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-import mm_cli
+import mm_clikit
 
 
 class TestPrintPlain:
@@ -12,12 +12,12 @@ class TestPrintPlain:
 
     def test_single_message(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Prints a single string message."""
-        mm_cli.print_plain("hello")
+        mm_clikit.print_plain("hello")
         assert capsys.readouterr().out == "hello\n"
 
     def test_multiple_messages(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Prints multiple messages space-separated."""
-        mm_cli.print_plain("hello", "world")
+        mm_clikit.print_plain("hello", "world")
         assert capsys.readouterr().out == "hello world\n"
 
     @pytest.mark.parametrize(
@@ -32,7 +32,7 @@ class TestPrintPlain:
     )
     def test_various_types(self, capsys: pytest.CaptureFixture[str], value: Any, expected: str) -> None:
         """Prints various types correctly."""
-        mm_cli.print_plain(value)
+        mm_clikit.print_plain(value)
         assert capsys.readouterr().out == expected
 
 
@@ -41,14 +41,14 @@ class TestPrintJson:
 
     def test_dict_serialization(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Serializes dict to JSON."""
-        mm_cli.print_json({"key": "value"})
+        mm_clikit.print_json({"key": "value"})
         output = capsys.readouterr().out
         assert '"key"' in output
         assert '"value"' in output
 
     def test_nested_structure(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Handles nested structures."""
-        mm_cli.print_json({"outer": {"inner": [1, 2, 3]}})
+        mm_clikit.print_json({"outer": {"inner": [1, 2, 3]}})
         output = capsys.readouterr().out
         assert '"outer"' in output
         assert '"inner"' in output
@@ -60,7 +60,7 @@ class TestPrintJson:
             def __init__(self, val: str) -> None:
                 self.val = val
 
-        mm_cli.print_json({"obj": Custom("test")}, type_handlers={Custom: lambda x: x.val})
+        mm_clikit.print_json({"obj": Custom("test")}, type_handlers={Custom: lambda x: x.val})
         output = capsys.readouterr().out
         assert '"test"' in output
 
@@ -76,7 +76,7 @@ class TestPrintJson:
     )
     def test_various_types(self, capsys: pytest.CaptureFixture[str], value: Any) -> None:
         """Handles various JSON-compatible types."""
-        mm_cli.print_json(value)
+        mm_clikit.print_json(value)
         output = capsys.readouterr().out
         assert len(output) > 0
 
@@ -86,7 +86,7 @@ class TestPrintTable:
 
     def test_basic_table(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Renders basic table with columns and rows."""
-        mm_cli.print_table(["Name", "Age"], [["Alice", 30], ["Bob", 25]])
+        mm_clikit.print_table(["Name", "Age"], [["Alice", 30], ["Bob", 25]])
         output = capsys.readouterr().out
         assert "Name" in output
         assert "Age" in output
@@ -95,7 +95,7 @@ class TestPrintTable:
 
     def test_with_title(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Renders table with title."""
-        mm_cli.print_table(["Col"], [["val"]], title="Title")
+        mm_clikit.print_table(["Col"], [["val"]], title="Title")
         output = capsys.readouterr().out
         assert "Title" in output
         assert "Col" in output
@@ -103,14 +103,14 @@ class TestPrintTable:
 
     def test_empty_rows(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Renders table with no rows."""
-        mm_cli.print_table(["A", "B"], [])
+        mm_clikit.print_table(["A", "B"], [])
         output = capsys.readouterr().out
         assert "A" in output
         assert "B" in output
 
     def test_cell_type_conversion(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Converts cell values to strings."""
-        mm_cli.print_table(["Val"], [[123], [None], [True]])
+        mm_clikit.print_table(["Val"], [[123], [None], [True]])
         output = capsys.readouterr().out
         assert "123" in output
         assert "None" in output
@@ -123,7 +123,7 @@ class TestPrintToml:
     def test_with_toml_string(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Prints TOML string with syntax highlighting."""
         toml_str = '[server]\nhost = "localhost"\nport = 8080'
-        mm_cli.print_toml(toml_str)
+        mm_clikit.print_toml(toml_str)
         output = capsys.readouterr().out
         assert "server" in output
         assert "localhost" in output
@@ -131,14 +131,14 @@ class TestPrintToml:
 
     def test_with_dict_input(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Serializes dict to TOML."""
-        mm_cli.print_toml({"database": {"host": "db.local", "port": 5432}})
+        mm_clikit.print_toml({"database": {"host": "db.local", "port": 5432}})
         output = capsys.readouterr().out
         assert "database" in output
         assert "db.local" in output
 
     def test_line_numbers(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Shows line numbers when enabled."""
-        mm_cli.print_toml("[section]\nkey = 1", line_numbers=True)
+        mm_clikit.print_toml("[section]\nkey = 1", line_numbers=True)
         output = capsys.readouterr().out
         # Line numbers appear as digits in output
         assert "1" in output
@@ -146,6 +146,6 @@ class TestPrintToml:
 
     def test_theme_parameter(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Accepts theme parameter without error."""
-        mm_cli.print_toml("[test]\nval = true", theme="github-dark")
+        mm_clikit.print_toml("[test]\nval = true", theme="github-dark")
         output = capsys.readouterr().out
         assert "test" in output
