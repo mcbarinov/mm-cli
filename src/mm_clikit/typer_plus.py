@@ -147,6 +147,8 @@ class TyperPlus(Typer):
     def __init__(self, *, package_name: str | None = None, **kwargs: Any) -> None:  # noqa: ANN401 — must forward arbitrary kwargs to Typer
         """Set AliasGroup as default cls and optionally register --version."""
         kwargs.setdefault("cls", AliasGroup)
+        kwargs.setdefault("no_args_is_help", True)
+        kwargs.setdefault("pretty_exceptions_enable", False)
         super().__init__(**kwargs)
 
         if package_name:
