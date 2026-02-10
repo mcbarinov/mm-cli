@@ -28,29 +28,22 @@ def deploy():
 Running `my-app --version` prints `my-app: 0.1.0` and exits.
 Running `my-app d` is equivalent to `my-app deploy`. Help output shows `deploy (d)`.
 
-> **Note:** Registering a custom `@app.callback()` replaces the auto-registered version callback.
-> Use `create_version_callback` to re-add `--version` manually.
-
-### create_version_callback
-
-Escape hatch for adding `--version` when you use a custom callback.
+`--version` / `-V` is automatically available even with a custom callback:
 
 ```python
-from mm_clikit import TyperPlus, create_version_callback
-import typer
+from mm_clikit import TyperPlus
 
-app = TyperPlus()
+app = TyperPlus(package_name="my-app")
 
 @app.callback()
 def main(
-    _version: bool | None = typer.Option(
-        None, "--version", "-V",
-        callback=create_version_callback("my-app"),
-        is_eager=True,
-    ),
+    debug: bool = False,
 ):
     """My CLI app."""
 ```
+
+> **Note:** If you define a `_version` parameter in your callback, auto-injection is skipped
+> and your definition takes precedence.
 
 ### fatal
 

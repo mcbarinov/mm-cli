@@ -10,17 +10,15 @@ Provides ``TyperPlus``, a drop-in ``Typer`` replacement that adds:
   In help output the command appears as ``deploy (d)``.
 
 * **Automatic ``--version`` / ``-V``** — pass ``package_name`` at init
-  and the flag is registered for you.
-
-Note:
-    If you register your own ``@app.callback()``, it replaces the
-    auto-registered version callback.  In that case, add ``--version``
-    manually via ``create_version_callback``.
+  and the flag is registered for you.  The flag persists even when you
+  register a custom ``@app.callback()`` — no manual wiring needed.
 
 """
 
 import importlib.metadata
+import inspect
 from collections.abc import Callable, Sequence
+from functools import wraps
 from typing import Any
 
 import click
@@ -135,12 +133,11 @@ class TyperPlus(Typer):
 
     Args:
         package_name: If set, auto-registers a ``--version`` / ``-V`` callback
-            that prints ``{package_name}: {version}`` and exits.
+            that prints ``{package_name}: {version}`` and exits.  The flag
+            persists even when a custom ``@app.callback()`` is registered.
+            Defining a ``_version`` parameter in your callback skips
+            auto-injection.
         **kwargs: Forwarded to ``Typer.__init__``.
-
-    Note:
-        Calling ``@app.callback()`` replaces the auto-registered version
-        callback.  Use ``create_version_callback`` to re-add it manually.
 
     """
 
@@ -151,6 +148,8 @@ class TyperPlus(Typer):
         kwargs.setdefault("pretty_exceptions_enable", False)
         super().__init__(**kwargs)
 
+        self._package_name = package_name
+
         if package_name:
             version_cb = create_version_callback(package_name)
 
@@ -159,6 +158,42 @@ class TyperPlus(Typer):
                 _version: bool | None = typer.Option(None, "--version", "-V", callback=version_cb, is_eager=True),
             ) -> None:
                 """Default callback with --version support."""
+
+    def callback(self, *args: Any, **kwargs: Any) -> Callable[..., Any]:  # noqa: ANN401 — must forward arbitrary kwargs to Typer.callback
+        """Register a callback, auto-injecting ``--version`` if ``package_name`` is set.
+
+        Injection is skipped when the decorated function already has a ``_version`` parameter.
+        """
+        parent_decorator = super().callback(*args, **kwargs)
+
+        package_name = self._package_name
+        if not package_name:
+            return parent_decorator
+
+        def injecting_decorator(f: Callable[..., Any]) -> Callable[..., Any]:
+            # Skip injection if user already defined _version
+            sig = inspect.signature(f)
+            if "_version" in sig.parameters:
+                return parent_decorator(f)
+
+            version_cb = create_version_callback(package_name)
+            version_param = inspect.Parameter(
+                "_version",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=typer.Option(None, "--version", "-V", callback=version_cb, is_eager=True),
+                annotation=bool | None,
+            )
+
+            @wraps(f)
+            def wrapper(*f_args: Any, _version: bool | None = None, **f_kwargs: Any) -> Any:  # noqa: ANN401 — must match arbitrary user callback signatures
+                return f(*f_args, **f_kwargs)
+
+            wrapper.__signature__ = sig.replace(parameters=[*sig.parameters.values(), version_param])  # type: ignore[attr-defined]
+            wrapper.__annotations__ = {**f.__annotations__, "_version": bool | None}
+
+            return parent_decorator(wrapper)
+
+        return injecting_decorator
 
     def command(
         self,

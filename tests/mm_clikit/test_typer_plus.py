@@ -6,7 +6,7 @@ import typer
 from typer.testing import CliRunner
 
 import mm_clikit
-from mm_clikit.typer_plus import AliasGroup
+from mm_clikit.typer_plus import AliasGroup, create_version_callback
 
 runner = CliRunner()
 
@@ -39,17 +39,17 @@ class TestCreateVersionCallback:
 
     def test_returns_callable(self) -> None:
         """Returns a callable."""
-        callback = mm_clikit.create_version_callback("mm-clikit")
+        callback = create_version_callback("mm-clikit")
         assert callable(callback)
 
     def test_no_op_when_false(self) -> None:
         """Does nothing when value is False."""
-        callback = mm_clikit.create_version_callback("mm-clikit")
+        callback = create_version_callback("mm-clikit")
         callback(False)
 
     def test_exits_when_true(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Prints version and exits when value is True."""
-        callback = mm_clikit.create_version_callback("mm-clikit")
+        callback = create_version_callback("mm-clikit")
         with pytest.raises(click.exceptions.Exit):
             callback(True)
         output = capsys.readouterr().out
@@ -57,7 +57,7 @@ class TestCreateVersionCallback:
 
     def test_callback_works_with_typer_option(self) -> None:
         """Can be used as a Typer Option callback."""
-        callback = mm_clikit.create_version_callback("mm-clikit")
+        callback = create_version_callback("mm-clikit")
         typer.Option(None, "--version", callback=callback, is_eager=True)
 
 
@@ -224,6 +224,46 @@ class TestTyperPlusInit:
 
         result = runner.invoke(app, ["--version"])
         assert result.exit_code != 0
+
+    def test_version_flag_with_custom_callback(self) -> None:
+        """--version is auto-injected into a user-defined @app.callback()."""
+        app = mm_clikit.TyperPlus(package_name="mm-clikit")
+
+        @app.callback()
+        def main(debug: bool = False) -> None:
+            """CLI with custom callback."""
+
+        @app.command("noop")
+        def noop() -> None:
+            """No-op."""
+
+        result = runner.invoke(app, ["--version"])
+        assert result.exit_code == 0
+        assert "mm-clikit:" in result.output
+
+    def test_version_skipped_when_user_defines_version(self) -> None:
+        """Auto-injection is skipped when user defines _version themselves."""
+        app = mm_clikit.TyperPlus(package_name="mm-clikit")
+
+        def custom_version_callback(value: bool) -> None:
+            if value:
+                typer.echo("custom-version-output")
+                raise typer.Exit
+
+        @app.callback()
+        def main(
+            _version: bool | None = typer.Option(None, "--version", "-V", callback=custom_version_callback, is_eager=True),
+        ) -> None:
+            """CLI with user-defined _version."""
+
+        @app.command("noop")
+        def noop() -> None:
+            """No-op."""
+
+        result = runner.invoke(app, ["--version"])
+        assert result.exit_code == 0
+        assert "custom-version-output" in result.output
+        assert "mm-clikit:" not in result.output
 
 
 class TestCommandDecorator:
