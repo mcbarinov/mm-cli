@@ -260,7 +260,7 @@ wheels = [
 
 [[package]]
 name = "mm-clikit"
-version = "0.0.5"
+version = "0.0.6"
 source = { editable = "." }
 dependencies = [
     { name = "mm-result" },

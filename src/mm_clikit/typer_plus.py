@@ -25,7 +25,7 @@ import click
 import typer
 from typer import Typer
 from typer.core import TyperGroup
-from typer.models import DefaultPlaceholder
+from typer.models import DefaultPlaceholder, TyperInfo
 
 from .output import print_plain
 
@@ -155,6 +155,12 @@ class TyperPlus(Typer):
 
     def __init__(self, *, package_name: str | None = None, **kwargs: Any) -> None:  # noqa: ANN401 — must forward arbitrary kwargs to Typer
         """Set AliasGroup as default cls and optionally register --version."""
+        # Init before super().__init__() — Typer's init writes self.registered_callback = None
+        self._registered_callback: TyperInfo | None = None
+        self._package_name = package_name
+        # guards lazy version setup in registered_callback property
+        self._version_setup_done = False
+
         # Mutable dict shared with the dynamic subclass; populated by add_typer()
         self._group_aliases: dict[str, list[str]] = {}
 
@@ -166,10 +172,70 @@ class TyperPlus(Typer):
         kwargs.setdefault("pretty_exceptions_enable", False)
         super().__init__(**kwargs)
 
-        self._package_name = package_name
+    @property
+    def registered_callback(self) -> TyperInfo | None:
+        """Lazy property that triggers version setup on first read.
 
-        if package_name:
-            version_cb = create_version_callback(package_name)
+        Typer's ``get_command()`` reads this attribute to decide Group vs Command mode.
+        By deferring setup, single-command apps stay in single-command mode.
+        """
+        self._ensure_version_setup()
+        return self._registered_callback
+
+    @registered_callback.setter
+    def registered_callback(self, value: TyperInfo | None) -> None:  # pyright: ignore[reportIncompatibleVariableOverride]
+        self._registered_callback = value
+
+    def _ensure_version_setup(self) -> None:
+        """Lazily inject ``--version`` based on the final app structure.
+
+        - **Single command** (1 command, no user callback, no groups): inject
+          ``--version`` into the command's params so Typer stays in single-command mode.
+        - **Multi-command** (2+ commands or groups): register a default callback.
+        - **User callback exists**: skip — the ``callback()`` override handles injection.
+        """
+        if self._version_setup_done or not self._package_name:
+            return
+        self._version_setup_done = True
+
+        # User already registered a callback — the callback() override handles injection
+        if self._registered_callback is not None:
+            return
+
+        has_groups = bool(self.registered_groups)
+        num_commands = len(self.registered_commands)
+
+        if num_commands == 1 and not has_groups:
+            # Single-command mode: inject --version directly into the command's callback
+            cmd_info = self.registered_commands[0]
+            if cmd_info.callback is None:
+                return
+
+            version_cb = create_version_callback(self._package_name)
+            original_callback = cmd_info.callback
+            sig = inspect.signature(original_callback)
+            version_param = inspect.Parameter(
+                "_version",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=typer.Option(None, "--version", "-V", callback=version_cb, is_eager=True),
+                annotation=bool | None,
+            )
+
+            @wraps(original_callback)
+            def wrapper(*args: Any, _version: bool | None = None, **f_kwargs: Any) -> Any:  # noqa: ANN401 — must match arbitrary user callback signatures
+                return original_callback(*args, **f_kwargs)
+
+            wrapper.__signature__ = sig.replace(parameters=[*sig.parameters.values(), version_param])  # type: ignore[attr-defined]
+            wrapper.__annotations__ = {**original_callback.__annotations__, "_version": bool | None}
+            cmd_info.callback = wrapper
+
+            # Propagate app-level no_args_is_help to the command
+            app_no_args = self.info.no_args_is_help
+            if isinstance(app_no_args, bool) and app_no_args and not cmd_info.no_args_is_help:
+                cmd_info.no_args_is_help = True
+        else:
+            # Multi-command mode: register a default callback with --version
+            version_cb = create_version_callback(self._package_name)
 
             @self.callback()
             def _default_callback(

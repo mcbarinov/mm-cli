@@ -395,3 +395,102 @@ class TestGroupAliases:
         """Bound subclass is still isinstance of AliasGroup."""
         group = typer.main.get_command(group_app)
         assert isinstance(group, AliasGroup)
+
+
+class TestSingleCommandMode:
+    """Tests for single-command apps with package_name — no subcommand required."""
+
+    @pytest.fixture()
+    def single_app(self) -> typer.Typer:
+        """App with one command and package_name."""
+        app = mm_clikit.TyperPlus(package_name="mm-clikit")
+
+        @app.command()
+        def hosts(name: str) -> None:
+            """Manage host entries."""
+            typer.echo(f"host={name}")
+
+        return app
+
+    def test_no_subcommand_in_help(self, single_app: typer.Typer) -> None:
+        """Help does not list the command as a subcommand."""
+        result = runner.invoke(single_app, ["--help"])
+        assert result.exit_code == 0
+        assert "Commands" not in result.output
+
+    def test_runs_directly(self, single_app: typer.Typer) -> None:
+        """Command runs without specifying its name."""
+        result = runner.invoke(single_app, ["myhost"])
+        assert result.exit_code == 0
+        assert "host=myhost" in result.output
+
+    def test_version_flag(self, single_app: typer.Typer) -> None:
+        """--version works in single-command mode."""
+        result = runner.invoke(single_app, ["--version"])
+        assert result.exit_code == 0
+        assert "mm-clikit:" in result.output
+
+    def test_version_short_flag(self, single_app: typer.Typer) -> None:
+        """-V works in single-command mode."""
+        result = runner.invoke(single_app, ["-V"])
+        assert result.exit_code == 0
+        assert "mm-clikit:" in result.output
+
+    def test_help_shows_command_docstring(self, single_app: typer.Typer) -> None:
+        """Help shows the command's docstring, not a default callback description."""
+        result = runner.invoke(single_app, ["--help"])
+        assert result.exit_code == 0
+        assert "Manage host entries" in result.output
+        assert "Default callback" not in result.output
+
+    def test_no_args_is_help_propagated(self, single_app: typer.Typer) -> None:
+        """Running without arguments shows full help, not just a bare error."""
+        result = runner.invoke(single_app, [])
+        # no_args_is_help shows full help instead of "Missing argument" error
+        assert "Manage host entries" in result.output
+        assert "Missing argument" not in result.output
+
+    def test_multi_command_with_package_name(self) -> None:
+        """Multi-command app with package_name still uses Group mode."""
+        app = mm_clikit.TyperPlus(package_name="mm-clikit")
+
+        @app.command("one")
+        def one() -> None:
+            """First."""
+            typer.echo("one-ok")
+
+        @app.command("two")
+        def two() -> None:
+            """Second."""
+            typer.echo("two-ok")
+
+        result = runner.invoke(app, ["one"])
+        assert result.exit_code == 0
+        assert "one-ok" in result.output
+
+        result = runner.invoke(app, ["--version"])
+        assert result.exit_code == 0
+        assert "mm-clikit:" in result.output
+
+    def test_user_callback_with_single_command_stays_group(self) -> None:
+        """User callback + single command stays in Group mode."""
+        app = mm_clikit.TyperPlus(package_name="mm-clikit")
+
+        @app.callback()
+        def main(debug: bool = False) -> None:
+            """My CLI app."""
+
+        @app.command("run")
+        def run_cmd() -> None:
+            """Run something."""
+            typer.echo("running")
+
+        # Group mode: command name required
+        result = runner.invoke(app, ["run"])
+        assert result.exit_code == 0
+        assert "running" in result.output
+
+        # --version still works
+        result = runner.invoke(app, ["--version"])
+        assert result.exit_code == 0
+        assert "mm-clikit:" in result.output
