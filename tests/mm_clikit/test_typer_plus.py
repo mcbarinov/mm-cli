@@ -450,6 +450,19 @@ class TestSingleCommandMode:
         assert "Manage host entries" in result.output
         assert "Missing argument" not in result.output
 
+    def test_no_args_runs_when_no_required_params(self) -> None:
+        """Single command with no required params runs instead of showing help."""
+        app = mm_clikit.TyperPlus(package_name="mm-clikit")
+
+        @app.command()
+        def main() -> None:
+            """Do stuff."""
+            typer.echo("executed")
+
+        result = runner.invoke(app, [])
+        assert result.exit_code == 0
+        assert "executed" in result.output
+
     def test_multi_command_with_package_name(self) -> None:
         """Multi-command app with package_name still uses Group mode."""
         app = mm_clikit.TyperPlus(package_name="mm-clikit")

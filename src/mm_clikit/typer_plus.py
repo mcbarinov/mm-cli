@@ -229,9 +229,14 @@ class TyperPlus(Typer):
             wrapper.__annotations__ = {**original_callback.__annotations__, "_version": bool | None}
             cmd_info.callback = wrapper
 
-            # Propagate app-level no_args_is_help to the command
+            # Propagate app-level no_args_is_help to the command only if it has required params
             app_no_args = self.info.no_args_is_help
-            if isinstance(app_no_args, bool) and app_no_args and not cmd_info.no_args_is_help:
+            has_required_params = any(
+                p.default is inspect.Parameter.empty
+                and p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+                for p in sig.parameters.values()
+            )
+            if isinstance(app_no_args, bool) and app_no_args and has_required_params and not cmd_info.no_args_is_help:
                 cmd_info.no_args_is_help = True
         else:
             # Multi-command mode: register a default callback with --version
